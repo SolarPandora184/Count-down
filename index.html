@@ -6,7 +6,7 @@
   <title>AESA Countdown</title>
   <style>
     body {
-      background: url('https://images.unsplash.com/photo-1581093448799-1b8943d81a2e') no-repeat center center fixed;
+      background: #000 center center fixed;
       background-size: cover;
       color: #fff;
       font-family: 'Courier New', Courier, monospace;
@@ -17,7 +17,6 @@
       text-align: center;
       height: 100vh;
       margin: 0;
-      backdrop-filter: brightness(0.5);
     }
 
     h1 {
@@ -34,16 +33,18 @@
 
     #secret-controls {
       display: none;
+      flex-direction: column;
+      gap: 10px;
     }
 
     #secret-controls.show {
-      display: block;
+      display: flex;
     }
 
-    button {
+    button, input[type="file"] {
       padding: 10px 20px;
       font-size: 1em;
-      background: rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.5);
       border: 1px solid #fff;
       color: #fff;
       cursor: pointer;
@@ -51,23 +52,57 @@
       outline: none;
     }
 
-    button:hover {
-      background: rgba(255,255,255,0.4);
+    button:hover, input[type="file"]:hover {
+      background: rgba(255,255,255,0.2);
     }
 
-    button:focus {
+    button:focus, input[type="file"]:focus {
       outline: none;
+    }
+
+    input[type="file"] {
+      background: rgba(0, 0, 0, 0.4);
     }
   </style>
 </head>
-<body tabindex="0">
+<body>
   <h1>AESA Countdown</h1>
   <div id="timer">Loading...</div>
+
   <div id="secret-controls">
     <button onclick="setCountdown()">Set Countdown Time</button>
+    <input type="file" accept="image/*" id="bgUpload" />
   </div>
 
-  <script>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+    // 🔁 Replace with your Firebase config:
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
+    const backgroundRef = ref(storage, 'backgrounds/custom.jpg');
+
+    // Load saved background from Firebase
+    getDownloadURL(backgroundRef)
+      .then((url) => {
+        document.body.style.backgroundImage = `url('${url}')`;
+      })
+      .catch((err) => {
+        console.log("No custom background found or error loading:", err.message);
+      });
+
+    // Countdown timer logic
     let countdownTo = null;
     let interval = null;
 
@@ -106,19 +141,51 @@
         `${days}d ${hours}h ${minutes}m ${seconds}s`;
     }
 
-    // Hide controls unless clicked manually (not Tab)
-    document.body.addEventListener('click', () => {
-      const controls = document.getElementById("secret-controls");
-      controls.classList.add("show");
+    // Show hidden controls on PageDown
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "PageDown") {
+        const controls = document.getElementById("secret-controls");
+        controls.classList.add("show");
 
-      // Optional: auto-hide after 10 seconds
-      setTimeout(() => {
-        controls.classList.remove("show");
-      }, 10000);
+        // Optional: auto-hide after 10 seconds
+        setTimeout(() => {
+          controls.classList.remove("show");
+        }, 10000);
+      }
     });
 
-    // Prevent tab focus on button
+    // Prevent tab focus on controls
     document.querySelector("button").setAttribute("tabindex", "-1");
+    document.querySelector("input[type='file']").setAttribute("tabindex", "-1");
+
+    // Upload image to Firebase
+    document.getElementById("bgUpload").addEventListener("change", function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          if (img.width !== img.height) {
+            alert("Please upload a square image.");
+          } else {
+            uploadBytes(backgroundRef, file)
+              .then(() => getDownloadURL(backgroundRef))
+              .then((url) => {
+                document.body.style.backgroundImage = `url('${url}')`;
+                alert("Background uploaded and applied.");
+              })
+              .catch((err) => {
+                console.error("Upload error:", err);
+                alert("Failed to upload background.");
+              });
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   </script>
 </body>
 </html>
