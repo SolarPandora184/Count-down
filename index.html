@@ -8,60 +8,46 @@
     body {
       background: #000 center center fixed;
       background-size: cover;
-      color: #fff;
-      font-family: 'Courier New', Courier, monospace;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      text-align: center;
+      align-items: center;
       height: 100vh;
       margin: 0;
     }
 
     h1 {
       font-size: 3em;
-      margin-bottom: 0.5em;
-      text-shadow: 2px 2px 5px #000;
+      text-shadow: 2px 2px 4px black;
     }
 
     #timer {
       font-size: 2em;
-      margin-bottom: 1em;
-      text-shadow: 1px 1px 3px #000;
+      margin: 1em 0;
+      text-shadow: 1px 1px 3px black;
     }
 
-    #secret-controls {
+    #controls {
       display: none;
       flex-direction: column;
       gap: 10px;
     }
 
-    #secret-controls.show {
+    #controls.show {
       display: flex;
     }
 
     button, input[type="file"] {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid white;
+      color: white;
       padding: 10px 20px;
-      font-size: 1em;
-      background: rgba(0,0,0,0.5);
-      border: 1px solid #fff;
-      color: #fff;
-      cursor: pointer;
       border-radius: 5px;
-      outline: none;
-    }
-
-    button:hover, input[type="file"]:hover {
-      background: rgba(255,255,255,0.2);
-    }
-
-    button:focus, input[type="file"]:focus {
-      outline: none;
-    }
-
-    input[type="file"] {
-      background: rgba(0, 0, 0, 0.4);
+      font-size: 1em;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -69,55 +55,57 @@
   <h1>AESA Countdown</h1>
   <div id="timer">Loading...</div>
 
-  <div id="secret-controls">
-    <button onclick="setCountdown()">Set Countdown Time</button>
-    <input type="file" accept="image/*" id="bgUpload" />
+  <div id="controls">
+    <button onclick="setCountdown()">Set Countdown</button>
+    <input type="file" id="bgUpload" accept="image/*">
   </div>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-    // 🔁 Replace with your Firebase config:
+    // ✅ Your Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyD...yourAPI",
+      authDomain: "tc-weed-abatement.firebaseapp.com",
+      projectId: "tc-weed-abatement",
+      storageBucket: "tc-weed-abatement.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef123456"
     };
 
     const app = initializeApp(firebaseConfig);
     const storage = getStorage(app);
-    const backgroundRef = ref(storage, 'backgrounds/custom.jpg');
+    const bgRef = ref(storage, 'backgrounds/custom.jpg');
 
-    // Load saved background from Firebase
-    getDownloadURL(backgroundRef)
-      .then((url) => {
-        document.body.style.backgroundImage = `url('${url}')`;
-      })
-      .catch((err) => {
-        console.log("No custom background found or error loading:", err.message);
+    // Try to load background from Firebase
+    getDownloadURL(bgRef).then(url => {
+      document.body.style.backgroundImage = `url(${url})`;
+    }).catch(console.warn);
+
+    // Upload and apply new background
+    document.getElementById('bgUpload').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      uploadBytes(bgRef, file).then(() => getDownloadURL(bgRef)).then(url => {
+        document.body.style.backgroundImage = `url(${url})`;
+        alert("Background updated.");
       });
+    });
 
-    // Countdown timer logic
+    // Countdown logic
     let countdownTo = null;
     let interval = null;
 
     function setCountdown() {
-      const input = prompt("Enter target date and time (YYYY-MM-DD HH:MM:SS):");
+      const input = prompt("Enter target date/time (YYYY-MM-DD HH:MM:SS):");
       if (!input) return;
+      const date = new Date(input.replace(" ", "T"));
+      if (isNaN(date)) return alert("Invalid format.");
 
-      const parsed = new Date(input.replace(' ', 'T'));
-      if (isNaN(parsed.getTime())) {
-        alert("Invalid date format. Try YYYY-MM-DD HH:MM:SS");
-        return;
-      }
-
-      countdownTo = parsed;
-      if (interval) clearInterval(interval);
+      countdownTo = date;
+      clearInterval(interval);
       updateTimer();
       interval = setInterval(updateTimer, 1000);
     }
@@ -125,66 +113,29 @@
     function updateTimer() {
       const now = new Date();
       const diff = countdownTo - now;
-
-      if (!countdownTo || diff <= 0) {
-        document.getElementById("timer").innerText = "LAUNCHED!";
+      if (diff <= 0) {
+        document.getElementById('timer').textContent = "LAUNCHED!";
         clearInterval(interval);
         return;
       }
 
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-      const seconds = Math.floor((diff / 1000) % 60);
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / (1000 * 60)) % 60);
+      const s = Math.floor((diff / 1000) % 60);
 
-      document.getElementById("timer").innerText =
-        `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      document.getElementById('timer').textContent =
+        `${d}d ${h}h ${m}m ${s}s`;
     }
 
-    // Show hidden controls on PageDown
-    document.addEventListener("keydown", (e) => {
-      if (e.code === "PageDown") {
-        const controls = document.getElementById("secret-controls");
-        controls.classList.add("show");
-
-        // Optional: auto-hide after 10 seconds
+    // Show controls on PageDown
+    document.addEventListener('keydown', e => {
+      if (e.code === 'PageDown') {
+        document.getElementById('controls').classList.add('show');
         setTimeout(() => {
-          controls.classList.remove("show");
+          document.getElementById('controls').classList.remove('show');
         }, 10000);
       }
-    });
-
-    // Prevent tab focus on controls
-    document.querySelector("button").setAttribute("tabindex", "-1");
-    document.querySelector("input[type='file']").setAttribute("tabindex", "-1");
-
-    // Upload image to Firebase
-    document.getElementById("bgUpload").addEventListener("change", function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          if (img.width !== img.height) {
-            alert("Please upload a square image.");
-          } else {
-            uploadBytes(backgroundRef, file)
-              .then(() => getDownloadURL(backgroundRef))
-              .then((url) => {
-                document.body.style.backgroundImage = `url('${url}')`;
-                alert("Background uploaded and applied.");
-              })
-              .catch((err) => {
-                console.error("Upload error:", err);
-                alert("Failed to upload background.");
-              });
-          }
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
     });
   </script>
 </body>
