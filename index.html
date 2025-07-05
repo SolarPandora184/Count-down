@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AESA Countdown</title>
+  <style>
+    body {
+      background: url('https://images.unsplash.com/photo-1581093448799-1b8943d81a2e') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100vh;
+      margin: 0;
+      backdrop-filter: brightness(0.5);
+    }
+
+    h1 {
+      font-size: 3em;
+      margin-bottom: 0.5em;
+      text-shadow: 2px 2px 5px #000;
+    }
+
+    #timer {
+      font-size: 2em;
+      margin-bottom: 1em;
+      text-shadow: 1px 1px 3px #000;
+    }
+
+    #secret-controls {
+      display: none;
+    }
+
+    #secret-controls.show {
+      display: block;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid #fff;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 5px;
+      outline: none;
+    }
+
+    button:hover {
+      background: rgba(255,255,255,0.4);
+    }
+
+    button:focus {
+      outline: none;
+    }
+  </style>
+</head>
+<body tabindex="0">
+  <h1>AESA Countdown</h1>
+  <div id="timer">Loading...</div>
+  <div id="secret-controls">
+    <button onclick="setCountdown()">Set Countdown Time</button>
+  </div>
+
+  <script>
+    let countdownTo = null;
+    let interval = null;
+
+    function setCountdown() {
+      const input = prompt("Enter target date and time (YYYY-MM-DD HH:MM:SS):");
+      if (!input) return;
+
+      const parsed = new Date(input.replace(' ', 'T'));
+      if (isNaN(parsed.getTime())) {
+        alert("Invalid date format. Try YYYY-MM-DD HH:MM:SS");
+        return;
+      }
+
+      countdownTo = parsed;
+      if (interval) clearInterval(interval);
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+      const now = new Date();
+      const diff = countdownTo - now;
+
+      if (!countdownTo || diff <= 0) {
+        document.getElementById("timer").innerText = "LAUNCHED!";
+        clearInterval(interval);
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      document.getElementById("timer").innerText =
+        `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    // Hide controls unless clicked manually (not Tab)
+    document.body.addEventListener('click', () => {
+      const controls = document.getElementById("secret-controls");
+      controls.classList.add("show");
+
+      // Optional: auto-hide after 10 seconds
+      setTimeout(() => {
+        controls.classList.remove("show");
+      }, 10000);
+    });
+
+    // Prevent tab focus on button
+    document.querySelector("button").setAttribute("tabindex", "-1");
+  </script>
+</body>
+</html>
